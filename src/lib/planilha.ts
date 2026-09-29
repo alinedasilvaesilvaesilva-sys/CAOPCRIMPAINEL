@@ -13,7 +13,9 @@ function numero(v: unknown): number {
 
 export async function lerPlanilha(file: File): Promise<Registro[]> {
   const wb = XLSX.read(await file.arrayBuffer());
-  const linhas = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0]]);
+  const aba = wb.Sheets[wb.SheetNames[0] ?? ""];
+  if (!aba) return [];
+  const linhas = XLSX.utils.sheet_to_json<Record<string, unknown>>(aba);
   return linhas
     .map((l) => {
       const get = (...nomes: string[]) => {

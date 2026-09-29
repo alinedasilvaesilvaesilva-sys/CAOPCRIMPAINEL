@@ -1,5 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
+import { Input } from "@/components/ui/input";
+import { verificarSenha } from "@/lib/senha.functions";
+import { lerPlanilha } from "@/lib/planilha";
+import type { Registro } from "@/lib/painel-data";
 import {
   Bar,
   BarChart,
@@ -10,7 +17,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Scale, RotateCcw } from "lucide-react";
+import { Scale, RotateCcw, Upload, Lock, Unlock } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -21,9 +28,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
-  ANOS_DISPONIVEIS,
-  COMARCAS,
-  PROMOTORES,
   REGISTROS,
   moeda,
   moedaCurta,
@@ -92,15 +96,74 @@ function Painel() {
   const [comarca, setComarca] = useState(TODOS);
   const [comarcaFoco, setComarcaFoco] = useState<string | null>(null);
 
+  const [registros, setRegistros] = useState<Registro[]>(REGISTROS);
+  const [temPlanilha, setTemPlanilha] = useState(false);
+  const [trancado, setTrancado] = useState(false);
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const checar = useServerFn(verificarSenha);
+
+  useEffect(() => {
+    try {
+      const salvo = localStorage.getItem("painel-registros");
+      if (salvo) {
+        setRegistros(JSON.parse(salvo));
+        setTemPlanilha(true);
+      }
+      setTrancado(localStorage.getItem("painel-trancado") === "1");
+    } catch {}
+  }, []);
+
+  const ANOS_DISPONIVEIS = useMemo(() => [...new Set(registros.map((r) => r.ano))].sort(), [registros]);
+  const PROMOTORES = useMemo(() => [...new Set(registros.map((r) => r.promotor))].sort(), [registros]);
+  const COMARCAS = useMemo(() => [...new Set(registros.map((r) => r.comarca))].sort(), [registros]);
+
+  const enviarPlanilha = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const novos = await lerPlanilha(file);
+      if (!novos.length) {
+        toast.error("Não encontrei linhas válidas. Use colunas: Ano, Promotor, Comarca, Valor, Execuções.");
+        return;
+      }
+      setRegistros(novos);
+      setTemPlanilha(true);
+      localStorage.setItem("painel-registros", JSON.stringify(novos));
+      limpar();
+      toast.success(`${novos.length} registros carregados.`);
+    } catch {
+      toast.error("Não foi possível ler a planilha.");
+    }
+  };
+
+  const trancar = () => {
+    setTrancado(true);
+    localStorage.setItem("painel-trancado", "1");
+  };
+
+  const destrancar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { ok } = await checar({ data: { senha } });
+    if (ok) {
+      setTrancado(false);
+      setSenha("");
+      setErro(false);
+      localStorage.removeItem("painel-trancado");
+    } else setErro(true);
+  };
+
   const dados = useMemo(
     () =>
-      REGISTROS.filter(
+      registros.filter(
         (r) =>
           (ano === TODOS || String(r.ano) === ano) &&
           (promotor === TODOS || r.promotor === promotor) &&
           (comarca === TODOS || r.comarca === comarca),
       ),
-    [ano, promotor, comarca],
+    [registros, ano, promotor, comarca],
   );
 
   const totalValor = dados.reduce((s, r) => s + r.valor, 0);
@@ -128,8 +191,37 @@ function Painel() {
     setComarca(TODOS);
   };
 
+  if (trancado) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Toaster />
+        <Card className="w-full max-w-sm gap-4 border-border bg-card p-6">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <Lock className="size-10 text-foreground" />
+            <h1 className="text-lg font-bold text-foreground">Painel trancado</h1>
+            <p className="text-sm text-muted-foreground">Digite a senha para acessar.</p>
+          </div>
+          <form onSubmit={destrancar} className="space-y-3">
+            <Input
+              type="password"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              placeholder="Senha"
+              autoFocus
+            />
+            {erro && <p className="text-sm text-destructive">Senha incorreta.</p>}
+            <Button type="submit" className="w-full gap-2">
+              <Unlock className="size-4" /> Destrancar
+            </Button>
+          </form>
+        </Card>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-background p-4 md:p-8">
+      <Toaster />
       <div className="mx-auto max-w-7xl overflow-hidden rounded-2xl border border-border bg-card/40 shadow-[var(--shadow-panel)]">
         <header className="bg-brand px-6 py-5 text-center">
           <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
@@ -167,8 +259,23 @@ function Painel() {
             <Button variant="secondary" className="w-full gap-2" onClick={limpar}>
               <RotateCcw className="size-4" /> Limpar filtros
             </Button>
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={enviarPlanilha}
+            />
+            <Button className="w-full gap-2" onClick={() => inputRef.current?.click()}>
+              <Upload className="size-4" /> Enviar planilha
+            </Button>
+            <Button variant="outline" className="w-full gap-2" onClick={trancar}>
+              <Lock className="size-4" /> Trancar painel
+            </Button>
             <p className="rounded-md bg-secondary/50 px-3 py-2 text-[11px] text-muted-foreground">
-              Dados de exemplo — aguardando base oficial.
+              {temPlanilha
+                ? "Dados da planilha enviada."
+                : "Dados de exemplo — envie uma planilha com as colunas Ano, Promotor, Comarca, Valor e Execuções."}
             </p>
           </aside>
 

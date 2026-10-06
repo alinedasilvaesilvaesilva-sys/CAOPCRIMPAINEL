@@ -29,7 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
-  REGISTROS,
+
   moeda,
   moedaCurta,
 } from "@/lib/painel-data";
@@ -97,7 +97,7 @@ function Painel() {
   const [comarca, setComarca] = useState(TODOS);
   const [comarcaFoco, setComarcaFoco] = useState<string | null>(null);
 
-  const [registros, setRegistros] = useState<Registro[]>(REGISTROS);
+  const [registros, setRegistros] = useState<Registro[]>([]);
   const [temPlanilha, setTemPlanilha] = useState(false);
   const [liberado, setLiberado] = useState(false);
   const [aberto, setAberto] = useState(false);
@@ -270,7 +270,7 @@ function Painel() {
             <p className="rounded-md bg-secondary/50 px-3 py-2 text-[11px] text-muted-foreground">
               {temPlanilha
                 ? "Dados da planilha enviada."
-                : "Dados de exemplo — envie uma planilha com as colunas Ano, Promotor, Comarca, Valor e Execuções."}
+                : "Nenhum dado carregado ainda."}
             </p>
           </aside>
 

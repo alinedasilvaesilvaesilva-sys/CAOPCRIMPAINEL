@@ -17,7 +17,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Scale, RotateCcw, Upload, Lock, Unlock } from "lucide-react";
+import { RotateCcw, Upload, Lock, Unlock } from "lucide-react";
+import logo from "@/assets/logo-mpma.jpg.asset.json";
 import {
   Select,
   SelectContent,
@@ -98,7 +99,8 @@ function Painel() {
 
   const [registros, setRegistros] = useState<Registro[]>(REGISTROS);
   const [temPlanilha, setTemPlanilha] = useState(false);
-  const [trancado, setTrancado] = useState(false);
+  const [liberado, setLiberado] = useState(false);
+  const [aberto, setAberto] = useState(false);
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -111,7 +113,6 @@ function Painel() {
         setRegistros(JSON.parse(salvo));
         setTemPlanilha(true);
       }
-      setTrancado(localStorage.getItem("painel-trancado") === "1");
     } catch {}
   }, []);
 
@@ -139,19 +140,16 @@ function Painel() {
     }
   };
 
-  const trancar = () => {
-    setTrancado(true);
-    localStorage.setItem("painel-trancado", "1");
-  };
+  const trancar = () => setLiberado(false);
 
   const destrancar = async (e: React.FormEvent) => {
     e.preventDefault();
     const { ok } = await checar({ data: { senha } });
     if (ok) {
-      setTrancado(false);
+      setLiberado(true);
+      setAberto(false);
       setSenha("");
       setErro(false);
-      localStorage.removeItem("painel-trancado");
     } else setErro(true);
   };
 
@@ -191,33 +189,6 @@ function Painel() {
     setComarca(TODOS);
   };
 
-  if (trancado) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Toaster />
-        <Card className="w-full max-w-sm gap-4 border-border bg-card p-6">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <Lock className="size-10 text-foreground" />
-            <h1 className="text-lg font-bold text-foreground">Painel trancado</h1>
-            <p className="text-sm text-muted-foreground">Digite a senha para acessar.</p>
-          </div>
-          <form onSubmit={destrancar} className="space-y-3">
-            <Input
-              type="password"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              placeholder="Senha"
-              autoFocus
-            />
-            {erro && <p className="text-sm text-destructive">Senha incorreta.</p>}
-            <Button type="submit" className="w-full gap-2">
-              <Unlock className="size-4" /> Destrancar
-            </Button>
-          </form>
-        </Card>
-      </main>
-    );
-  }
 
   return (
     <main className="min-h-screen bg-background p-4 md:p-8">
@@ -235,13 +206,8 @@ function Painel() {
         <div className="grid gap-4 p-4 md:p-6 lg:grid-cols-[230px_1fr_300px]">
           {/* Filtros */}
           <aside className="space-y-4">
-            <div className="flex items-center gap-3 rounded-lg border border-border bg-card/70 p-3">
-              <Scale className="size-8 shrink-0 text-foreground" />
-              <div className="text-[11px] leading-tight text-muted-foreground">
-                <p className="font-semibold text-foreground">MINISTÉRIO PÚBLICO</p>
-                <p>Estado do Maranhão</p>
-                <p>Procuradoria Geral de Justiça</p>
-              </div>
+            <div className="rounded-lg bg-card p-3">
+              <img src={logo.url} alt="MPMA CAO-Crim" className="w-full rounded" />
             </div>
             <Filtro label="Ano" value={ano} options={ANOS_DISPONIVEIS} onChange={setAno} />
             <Filtro
@@ -259,19 +225,48 @@ function Painel() {
             <Button variant="secondary" className="w-full gap-2" onClick={limpar}>
               <RotateCcw className="size-4" /> Limpar filtros
             </Button>
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={enviarPlanilha}
-            />
-            <Button className="w-full gap-2" onClick={() => inputRef.current?.click()}>
-              <Upload className="size-4" /> Enviar planilha
-            </Button>
-            <Button variant="outline" className="w-full gap-2" onClick={trancar}>
-              <Lock className="size-4" /> Trancar painel
-            </Button>
+            <div className="rounded-lg border border-border bg-card/70 p-3">
+              <button
+                type="button"
+                onClick={() => (liberado ? trancar() : setAberto((v) => !v))}
+                className="flex w-full items-center justify-between gap-2 text-left"
+              >
+                <span className="flex items-center gap-2 text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
+                  {liberado ? <Unlock className="size-4" /> : <Lock className="size-4" />}
+                  Área restrita — Equipe CAO Criminal
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {liberado ? "Fechar" : aberto ? "Cancelar" : "Abrir"}
+                </span>
+              </button>
+              {!liberado && aberto && (
+                <form onSubmit={destrancar} className="mt-3 space-y-2">
+                  <Input
+                    type="password"
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    placeholder="Senha"
+                    autoFocus
+                  />
+                  {erro && <p className="text-xs text-destructive">Senha incorreta.</p>}
+                  <Button type="submit" size="sm" className="w-full">Entrar</Button>
+                </form>
+              )}
+              {liberado && (
+                <>
+                  <input
+                    ref={inputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    className="hidden"
+                    onChange={enviarPlanilha}
+                  />
+                  <Button className="mt-3 w-full gap-2" onClick={() => inputRef.current?.click()}>
+                    <Upload className="size-4" /> Enviar planilha
+                  </Button>
+                </>
+              )}
+            </div>
             <p className="rounded-md bg-secondary/50 px-3 py-2 text-[11px] text-muted-foreground">
               {temPlanilha
                 ? "Dados da planilha enviada."

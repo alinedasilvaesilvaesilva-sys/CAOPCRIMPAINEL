@@ -14,7 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      registros: {
+        Row: {
+          ano: number
+          comarca: string
+          created_at: string
+          execucoes: number
+          id: string
+          promotor: string
+          valor: number
+        }
+        Insert: {
+          ano: number
+          comarca: string
+          created_at?: string
+          execucoes?: number
+          id?: string
+          promotor: string
+          valor?: number
+        }
+        Update: {
+          ano?: number
+          comarca?: string
+          created_at?: string
+          execucoes?: number
+          id?: string
+          promotor?: string
+          valor?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

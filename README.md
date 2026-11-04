@@ -1,14 +1,18 @@
-# Welcome to your Lovable project
+# Interactive Data View
+
+quero q faça um painel bi,tipo imagem mais interativo,tipo esse exemplo ai,utilizando as cores do mp essa q eu mandei ai tbm,pode deixar os mesmos filtros só q sem essas informações ai
 
 This project was built with [Lovable](https://lovable.dev).
 
+**Live app**: https://mp-viz-maker.lovable.app
+
 ## Build with Lovable
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/55dbf0f2-c9dc-45d8-855e-2f7984881e2c).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
@@ -20,10 +24,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS

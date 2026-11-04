@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Input } from "@/components/ui/input";
 import { verificarSenha } from "@/lib/senha.functions";
 import { lerPlanilha } from "@/lib/planilha";
+import { listarRegistros, salvarRegistros } from "@/lib/registros.functions";
 import type { Registro } from "@/lib/painel-data";
 import {
   Bar,
@@ -106,15 +107,18 @@ function Painel() {
   const inputRef = useRef<HTMLInputElement>(null);
   const checar = useServerFn(verificarSenha);
 
+  const listar = useServerFn(listarRegistros);
+  const salvar = useServerFn(salvarRegistros);
+  const [senhaUsada, setSenhaUsada] = useState("");
+
   useEffect(() => {
-    try {
-      const salvo = localStorage.getItem("painel-registros");
-      if (salvo) {
-        setRegistros(JSON.parse(salvo));
-        setTemPlanilha(true);
-      }
-    } catch {}
-  }, []);
+    listar()
+      .then((r) => {
+        setRegistros(r);
+        setTemPlanilha(r.length > 0);
+      })
+      .catch(() => {});
+  }, [listar]);
 
   const ANOS_DISPONIVEIS = useMemo(() => [...new Set(registros.map((r) => r.ano))].sort(), [registros]);
   const PROMOTORES = useMemo(() => [...new Set(registros.map((r) => r.promotor))].sort(), [registros]);
@@ -130,9 +134,9 @@ function Painel() {
         toast.error("Não encontrei linhas válidas. Use colunas: Ano, Promotor, Comarca, Valor, Execuções.");
         return;
       }
+      await salvar({ data: { senha: senhaUsada, registros: novos } });
       setRegistros(novos);
       setTemPlanilha(true);
-      localStorage.setItem("painel-registros", JSON.stringify(novos));
       limpar();
       toast.success(`${novos.length} registros carregados.`);
     } catch {
@@ -147,6 +151,7 @@ function Painel() {
     const { ok } = await checar({ data: { senha } });
     if (ok) {
       setLiberado(true);
+      setSenhaUsada(senha);
       setAberto(false);
       setSenha("");
       setErro(false);
